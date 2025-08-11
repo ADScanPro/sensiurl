@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=69.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sensiurl"
+version = "0.1.0"
+description = "Sensitive URL Scanner with Rich CLI and optional Textual TUI."
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+  { name = "ADScanPro" }
+]
+keywords = ["security", "scanner", "url", "rich", "textual", "httpx", "pentest"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "Topic :: Security",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Environment :: Console",
+]
+dependencies = [
+  "rich>=13.7.0",
+  "textual>=0.58.0",
+  "httpx>=0.27.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/ADScanPro/web_scripts"
+Repository = "https://github.com/ADScanPro/web_scripts"
+
+[project.scripts]
+sensiurl = "sensiurl.cli:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["sensiurl*"]
