@@ -14,7 +14,7 @@ SensiURL is a modular Python tool to scan base URLs for exposed sensitive files 
 Install via pipx (recommended):
 
 ```bash
-pipx install git+https://github.com/ADScanPro/web_scripts.git
+pipx install git+https://github.com/ADScanPro/sensiurl.git
 ```
 
 Run after install:
@@ -26,7 +26,7 @@ sensiurl --input targets.txt
 Install via pip from Git:
 
 ```bash
-pip install git+https://github.com/ADScanPro/web_scripts.git
+pip install git+https://github.com/ADScanPro/sensiurl.git
 ```
 
 From source (dev):
