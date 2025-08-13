@@ -55,17 +55,20 @@ def print_results(findings: List[Finding], base_count: int, total_candidates: in
     table.add_column("Severity", no_wrap=True)
     table.add_column("Category", no_wrap=True)
     table.add_column("Status", no_wrap=True)
+    table.add_column("Open", no_wrap=True)
     table.add_column("URL", overflow="fold")
     table.add_column("Reason", overflow="fold")
     table.add_column("Evidence", overflow="fold")
 
     for f in findings:
         sev_style = _sev_style(f.severity)
-        url_text = Text(f.url, style=f"link {f.url}")
+        open_link = Text("open", style=f"link {f.url}")
+        url_text = Text(f.url)
         table.add_row(
             f"[{sev_style}]{f.severity.value}[/]",
             f.category.value,
             str(f.status_code or ""),
+            open_link,
             url_text,
             f.reason,
             (f.evidence or "").replace("\n", " "),
