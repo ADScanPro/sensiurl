@@ -35,9 +35,13 @@ class Candidate:
     severity_hint: Severity
     method: str = "auto"  # auto | head | get
     is_directory: bool = False
+    is_full_url: bool = False
 
     @property
     def url(self) -> str:
+        # In exact mode, the base_url already contains the full URL (including path/query)
+        if self.is_full_url:
+            return self.base_url
         base = self.base_url.rstrip("/") + "/"
         # Ensure path has no leading double slashes
         path = self.path.lstrip("/")
