@@ -130,7 +130,7 @@ def _print_precandidates(urls: List[str]) -> None:
     # Classify provided URLs (exact mode) and show those that look sensitive by path
     cands = []
     for u in urls:
-        cands.extend(generate_candidates(u, mode="exact"))
+        cands.extend(generate_candidates(u))
     cands = [c for c in cands if c.category != Category.OTHER]
     console = Console()
     if not cands:
@@ -168,7 +168,7 @@ def _configure_logging(debug: bool, verbose: bool) -> None:
 def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="sensiurl",
-        description="Scan URLs for exposed sensitive files and directories (exact-only).",
+        description="Scan URLs for exposed sensitive files and directories.",
     )
     parser.add_argument("--input", required=True, help="Path to file with base URLs (one per line)")
     parser.add_argument("--concurrency", type=int, default=50)
