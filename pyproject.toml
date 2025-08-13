@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sensiurl"
-version = "0.2.0"
-description = "Sensitive URL Scanner with Rich CLI and optional Textual TUI."
+version = "0.2.1"
+description = "Sensitive URL Scanner."
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [
@@ -33,8 +33,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ADScanPro/web_scripts"
-Repository = "https://github.com/ADScanPro/web_scripts"
+Homepage = "https://github.com/ADScanPro/sensiurl"
+Repository = "https://github.com/ADScanPro/sensiurl"
 
 [project.scripts]
 sensiurl = "sensiurl.cli:main"

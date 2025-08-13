@@ -5,7 +5,7 @@ import json
 import sys
 import logging
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from collections import Counter
 from urllib.parse import urlsplit, urlunsplit
 
@@ -23,33 +23,52 @@ def normalize_url(u: str, *, keep_query: bool = False, keep_fragment: bool = Fal
     u = u.strip()
     if not u or u.startswith("#"):
         return ""
-    sp = urlsplit(u)
+    try:
+        sp = urlsplit(u)
+    except ValueError:
+        # Invalid URL-like input
+        return ""
     if not sp.scheme:
         # default to http
         sp = sp._replace(scheme="http")
     if not sp.netloc and sp.path:
         # user might have provided domain only
-        return f"http://{sp.path}"
+        # NOTE: keep only the first token to avoid spaces in host
+        host_candidate = sp.path.split()[0]
+        if not host_candidate:
+            return ""
+        return f"http://{host_candidate}"
     # Preserve or strip query/fragment depending on flags
     if not keep_query:
         sp = sp._replace(query="")
     if not keep_fragment:
         sp = sp._replace(fragment="")
-    return urlunsplit(sp)
+    try:
+        return urlunsplit(sp)
+    except ValueError:
+        return ""
 
 
-def load_targets(path: Path, *, mode: str) -> List[str]:
+def load_targets(path: Path, *, mode: str) -> Tuple[List[str], List[Tuple[int, str]]]:
     lines = path.read_text(encoding="utf-8").splitlines()
     exact = mode == "exact"
-    urls = [
-        normalize_url(
-            l,
+    targets: List[str] = []
+    invalid: List[Tuple[int, str]] = []
+    for idx, raw in enumerate(lines, start=1):
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            # Ignore comments and blank lines silently
+            continue
+        normalized = normalize_url(
+            stripped,
             keep_query=exact,  # In exact mode we keep query
             keep_fragment=False,  # Fragment is never sent to server; keep for display isn't useful
         )
-        for l in lines
-    ]
-    return [u for u in urls if u]
+        if normalized:
+            targets.append(normalized)
+        else:
+            invalid.append((idx, stripped))
+    return targets, invalid
 
 
 def _extract_extension_label(url: str) -> str:
@@ -60,7 +79,10 @@ def _extract_extension_label(url: str) -> str:
     - Dot-directories or dot-files like /.git/ or /.env are labeled as '.git' or '.env'.
     - If no extension exists, returns 'none'.
     """
-    sp = urlsplit(url)
+    try:
+        sp = urlsplit(url)
+    except ValueError:
+        return "invalid"
     path = sp.path or ""
     if not path or path.endswith("/"):
         # Directory path; try to detect dot-directory
@@ -171,14 +193,26 @@ def main(argv: List[str] | None = None) -> int:
         Console().print(f"[red]Input file not found:[/red] {input_path}")
         return 1
 
-    targets = load_targets(input_path, mode=args.mode)
-    if not targets:
+    targets, invalid_entries = load_targets(input_path, mode=args.mode)
+    if not targets and not invalid_entries:
         Console().print("[yellow]No valid targets found in input file.[/yellow]")
         return 1
+    if invalid_entries:
+        console = Console()
+        console.print("[yellow]Skipping invalid URL entries:[/yellow]")
+        for ln, bad in invalid_entries:
+            console.print(f"  - [red]{bad}[/red] (line {ln})")
+        if not targets:
+            Console().print("[yellow]All input entries were invalid. Nothing to do.[/yellow]")
+            return 1
 
     # Pre-scan: show extensions overview and pre-candidates (exact mode)
     if args.mode == "exact":
-        _print_extensions_summary(_summarize_extensions(targets))
+        # Do not include 'invalid' bucket in summary (already filtered)
+        summary = _summarize_extensions(targets)
+        if "invalid" in summary:
+            summary.pop("invalid", None)
+        _print_extensions_summary(summary)
         _print_precandidates(targets)
 
     if args.tui:
