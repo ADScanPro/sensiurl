@@ -4,13 +4,17 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import List
+from typing import Dict, List
+from collections import Counter
 from urllib.parse import urlsplit, urlunsplit
 
 from rich.console import Console
+from rich.table import Table
 
 from .reporter import print_results
 from .scanner import run_scan
+from .models import Category
+from .candidates import generate_candidates
 
 
 def normalize_url(u: str, *, keep_query: bool = False, keep_fragment: bool = False) -> str:
@@ -46,6 +50,88 @@ def load_targets(path: Path, *, mode: str) -> List[str]:
     return [u for u in urls if u]
 
 
+def _extract_extension_label(url: str) -> str:
+    """Extract a human-readable extension label from a URL path.
+
+    Rules:
+    - Compound extensions like .tar.gz and .sql.gz are preserved.
+    - Dot-directories or dot-files like /.git/ or /.env are labeled as '.git' or '.env'.
+    - If no extension exists, returns 'none'.
+    """
+    sp = urlsplit(url)
+    path = sp.path or ""
+    if not path or path.endswith("/"):
+        # Directory path; try to detect dot-directory
+        parts = [p for p in path.split('/') if p]
+        if parts and parts[-1].startswith('.'):
+            return parts[-1]
+        return "none"
+    # File path
+    name = path.rsplit('/', 1)[-1]
+    # Dot-file without further extension
+    if name.startswith('.') and name.count('.') == 1:
+        return name
+    # Compound extensions
+    lower = name.lower()
+    for comp in ('.tar.gz', '.tar.bz2', '.sql.gz', '.tgz'):
+        if lower.endswith(comp):
+            return comp.lstrip('.')
+    # Regular extension
+    if '.' in name:
+        return name.rsplit('.', 1)[-1].lower()
+    return "none"
+
+
+def _summarize_extensions(urls: List[str]) -> Dict[str, int]:
+    counts: Counter[str] = Counter()
+    for u in urls:
+        ext = _extract_extension_label(u)
+        counts[ext] += 1
+    # Sort by count desc then name asc
+    return dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+
+
+def _print_extensions_summary(ext_counts: Dict[str, int]) -> None:
+    if not ext_counts:
+        return
+    console = Console()
+    table = Table(title="Extensions overview", expand=False)
+    table.add_column("Extension", no_wrap=True)
+    table.add_column("Count", justify="right")
+    for ext, cnt in ext_counts.items():
+        table.add_row(ext, str(cnt))
+    console.print(table)
+
+
+def _print_precandidates(urls: List[str]) -> None:
+    # Classify provided URLs (exact mode) and show those that look sensitive by path
+    cands = []
+    for u in urls:
+        cands.extend(generate_candidates(u, mode="exact"))
+    cands = [c for c in cands if c.category != Category.OTHER]
+    console = Console()
+    if not cands:
+        console.print("[green]No sensitive-looking URLs detected in input.[/green]")
+        return
+    # Summary by category
+    by_cat: Dict[str, int] = {}
+    for c in cands:
+        by_cat[c.category.value] = by_cat.get(c.category.value, 0) + 1
+    table = Table(title="Sensitive-looking URLs (by category)", expand=False)
+    table.add_column("Category", no_wrap=True)
+    table.add_column("Count", justify="right")
+    for cat, cnt in sorted(by_cat.items(), key=lambda kv: (-kv[1], kv[0])):
+        table.add_row(cat, str(cnt))
+    console.print(table)
+    # List URLs
+    list_table = Table(title="Sensitive-looking URLs", expand=True)
+    list_table.add_column("Category", no_wrap=True)
+    list_table.add_column("URL")
+    for c in cands:
+        list_table.add_row(c.category.value, c.url)
+    console.print(list_table)
+
+
 def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="sensiurl",
@@ -60,6 +146,7 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--no-follow-redirects", action="store_true")
     parser.add_argument("--user-agent", default="SensiURL/0.1 (+https://github.com/)")
     parser.add_argument("--json-output", help="Write findings as JSON to the given path")
+    parser.add_argument("--rate-limit", type=float, default=None, help="Max requests per second (RPS)")
     parser.add_argument("--tui", action="store_true", help="Launch Textual TUI instead of Rich CLI")
 
     args = parser.parse_args(argv)
@@ -74,6 +161,11 @@ def main(argv: List[str] | None = None) -> int:
         Console().print("[yellow]No valid targets found in input file.[/yellow]")
         return 1
 
+    # Pre-scan: show extensions overview (mainly useful in exact mode)
+    if args.mode == "exact":
+        _print_extensions_summary(_summarize_extensions(targets))
+        _print_precandidates(targets)
+
     if args.tui:
         from .tui import SensitiveScannerApp
 
@@ -86,6 +178,7 @@ def main(argv: List[str] | None = None) -> int:
             follow_redirects=not args.no_follow_redirects,
             insecure=args.insecure,
             user_agent=args.user_agent,
+            rate_limit=args.rate_limit,
         )
         app.run()
         return 0
@@ -100,6 +193,7 @@ def main(argv: List[str] | None = None) -> int:
         follow_redirects=not args.no_follow_redirects,
         insecure=args.insecure,
         user_agent=args.user_agent,
+        rate_limit=args.rate_limit,
     )
 
     from .candidates import generate_candidates

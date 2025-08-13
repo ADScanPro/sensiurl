@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List
+from typing import List, Optional
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -30,6 +30,7 @@ class SensitiveScannerApp(App):
         follow_redirects: bool = True,
         insecure: bool = False,
         user_agent: str = "SensiURL/0.1",
+        rate_limit: Optional[float] = None,
     ) -> None:
         super().__init__()
         self.base_urls = base_urls
@@ -40,6 +41,7 @@ class SensitiveScannerApp(App):
         self.follow_redirects = follow_redirects
         self.insecure = insecure
         self.user_agent = user_agent
+        self.rate_limit = rate_limit
         self.progress_label = Label("Preparing scan…")
         self.table = DataTable(zebra_stripes=True)
         self.spinner = LoadingIndicator()
@@ -75,6 +77,7 @@ class SensitiveScannerApp(App):
             follow_redirects=self.follow_redirects,
             insecure=self.insecure,
             user_agent=self.user_agent,
+            rate_limit=self.rate_limit,
             progress_cb=on_progress,
         )
         self._populate_table(findings)

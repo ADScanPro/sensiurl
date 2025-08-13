@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sensiurl"
-version = "0.1.0"
+version = "0.2.0"
 description = "Sensitive URL Scanner with Rich CLI and optional Textual TUI."
 readme = "README.md"
 requires-python = ">=3.8"
 authors = [
-  { name = "ADScanPro" }
+  { name = "ADscan" }
 ]
 keywords = ["security", "scanner", "url", "rich", "textual", "httpx", "pentest"]
 classifiers = [

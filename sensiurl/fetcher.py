@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Optional
+from typing import Optional, Callable, Awaitable
 
 import httpx
 
@@ -13,6 +13,7 @@ async def fetch_candidate(
     client: httpx.AsyncClient,
     timeout: float = 10.0,
     max_bytes: int = 2048,
+    before_request: Optional[Callable[[], Awaitable[None]]] = None,
 ) -> FetchResult:
     """Fetch a candidate URL. Try HEAD first, then GET with range or streamed partial body.
 
@@ -23,6 +24,8 @@ async def fetch_candidate(
 
     # Attempt HEAD first
     try:
+        if before_request:
+            await before_request()
         r = await client.head(url, timeout=timeout)
         status_code = r.status_code
         content_type = r.headers.get("Content-Type")
@@ -30,6 +33,8 @@ async def fetch_candidate(
         # Some servers return 405/403 for HEAD; fall back to GET
         if status_code in (200, 206, 403, 401, 405):
             # We'll still do a small GET to sample content to help detection
+            if before_request:
+                await before_request()
             snippet_info = await _sample_get(client, url, timeout=timeout, max_bytes=max_bytes)
             final_url = snippet_info[0] if snippet_info else str(r.request.url)
             snippet = snippet_info[1] if snippet_info else None
@@ -57,6 +62,8 @@ async def fetch_candidate(
     except Exception as e:
         # Try GET directly if HEAD failed
         try:
+            if before_request:
+                await before_request()
             snippet_info = await _sample_get(client, url, timeout=timeout, max_bytes=max_bytes)
             return FetchResult(
                 url=url,
