@@ -176,7 +176,7 @@ def main(argv: List[str] | None = None) -> int:
         Console().print("[yellow]No valid targets found in input file.[/yellow]")
         return 1
 
-    # Pre-scan: show extensions overview (mainly useful in exact mode)
+    # Pre-scan: show extensions overview and pre-candidates (exact mode)
     if args.mode == "exact":
         _print_extensions_summary(_summarize_extensions(targets))
         _print_precandidates(targets)

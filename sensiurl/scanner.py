@@ -8,7 +8,7 @@ import httpx
 
 from .candidates import generate_candidates
 from .detectors import analyze
-from .models import Candidate, Finding, Severity
+from .models import Candidate, Finding, Severity, Category
 
 
 class _RateLimiter:
@@ -70,6 +70,17 @@ async def scan_async(
     candidates: List[Candidate] = []
     for base in base_urls:
         candidates.extend(generate_candidates(base, mode=mode))
+
+    # In exact mode, only fetch URLs that look sensitive. Others are ignored.
+    if mode == "exact":
+        pre_filter_count = len(candidates)
+        candidates = [c for c in candidates if c.category != Category.OTHER]
+        filtered_out = pre_filter_count - len(candidates)
+        logging.getLogger(__name__).info(
+            "Exact mode: %d candidates to scan (%d ignored as non-sensitive)",
+            len(candidates),
+            filtered_out,
+        )
 
     total = len(candidates)
     completed = 0
