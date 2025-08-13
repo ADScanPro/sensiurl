@@ -5,6 +5,7 @@ from typing import Iterable, List, Optional
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
+from rich.text import Text
 from rich.table import Table
 
 from .models import Finding, Severity
@@ -60,11 +61,12 @@ def print_results(findings: List[Finding], base_count: int, total_candidates: in
 
     for f in findings:
         sev_style = _sev_style(f.severity)
+        url_text = Text(f.url, style=f"link {f.url}")
         table.add_row(
             f"[{sev_style}]{f.severity.value}[/]",
             f.category.value,
             str(f.status_code or ""),
-            f.url,
+            url_text,
             f.reason,
             (f.evidence or "").replace("\n", " "),
         )
