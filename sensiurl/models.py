@@ -50,7 +50,11 @@ class Candidate:
 
     @property
     def origin(self) -> str:
-        sp = urlsplit(self.base_url)
+        try:
+            sp = urlsplit(self.base_url)
+        except ValueError:
+            # Fallback to http scheme with empty host
+            return "http://"
         return urlunsplit((sp.scheme or "http", sp.netloc, "", "", ""))
 
 

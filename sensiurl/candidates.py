@@ -13,7 +13,11 @@ def generate_candidates(base_url: str, mode: str = "standard") -> List[Candidate
     """
     # New exact mode: do NOT append any paths; treat provided URL as-is
     if mode == "exact":
-        path = urlsplit(base_url).path or ""
+        try:
+            path = urlsplit(base_url).path or ""
+        except ValueError:
+            # Base URL not parseable (e.g., invalid bracketed host) -> skip
+            return []
         category, severity, is_dir, desc = _classify_exact_path(path)
         return [
             Candidate(
