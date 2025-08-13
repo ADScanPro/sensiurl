@@ -90,6 +90,25 @@ def analyze(candidate: Candidate, res: FetchResult) -> Optional[Finding]:
         if any(x in ct for x in ("zip", "x-7z-compressed", "x-tar", "x-gzip")) or status == 206:
             return _mk(candidate, res, Severity.HIGH, "Archive available", None)
 
+    # Documents
+    if candidate.category == Category.DOCUMENTS:
+        # Consider 200/206 and common document content-types as exposure
+        if status in (200, 206) and any(
+            x in (ct or "") for x in (
+                "application/pdf",
+                "application/msword",
+                "application/vnd.openxmlformats-officedocument",
+                "application/vnd.ms-excel",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.ms-powerpoint",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                "application/rtf",
+                "application/vnd.oasis.opendocument",
+            )
+        ):
+            sev = max(candidate.severity_hint, Severity.MEDIUM, key=_sev_key)
+            return _mk(candidate, res, sev, "Document available", None)
+
     # Debug endpoints
     if candidate.category == Category.DEBUG:
         if "phpinfo()" in snippet_text or "PHP Version" in snippet_text:

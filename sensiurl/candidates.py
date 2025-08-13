@@ -207,6 +207,19 @@ def _classify_exact_path(path: str) -> Tuple[Category, Severity, bool, str]:
     if p.endswith("backup.tar.gz"):
         return Category.ARCHIVES, Severity.HIGH, False, "TGZ archive"
 
+    # Documents (potentially sensitive office/PDF files)
+    doc_exts_high = (".pst",)  # Outlook mail stores
+    doc_exts_medium = (
+        ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+        ".pdf", ".rtf", ".odt", ".ods", ".odp",
+    )
+    for ext in doc_exts_high:
+        if p.lower().endswith(ext):
+            return Category.DOCUMENTS, Severity.HIGH, False, f"Document ({ext.lstrip('.')})"
+    for ext in doc_exts_medium:
+        if p.lower().endswith(ext):
+            return Category.DOCUMENTS, Severity.MEDIUM, False, f"Document ({ext.lstrip('.')})"
+
     # Temporary / misc
     if p.endswith(".DS_Store"):
         return Category.TEMP, Severity.LOW, False, "macOS DS_Store"

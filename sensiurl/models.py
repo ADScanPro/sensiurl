@@ -20,6 +20,7 @@ class Category(str, Enum):
     DUMPS = "DUMPS"
     LOGS = "LOGS"
     ARCHIVES = "ARCHIVES"
+    DOCUMENTS = "DOCUMENTS"
     TEMP = "TEMP"
     DIRECTORY = "DIRECTORY"
     DEBUG = "DEBUG"
