@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Optional, Callable, Awaitable
 
 import httpx
@@ -21,11 +22,13 @@ async def fetch_candidate(
     """
     url = candidate.url
     headers = {"Accept": "*/*"}
+    log = logging.getLogger(__name__)
 
     # Attempt HEAD first
     try:
         if before_request:
             await before_request()
+        log.debug("HEAD %s", url)
         r = await client.head(url, timeout=timeout)
         status_code = r.status_code
         content_type = r.headers.get("Content-Type")
@@ -35,6 +38,7 @@ async def fetch_candidate(
             # We'll still do a small GET to sample content to help detection
             if before_request:
                 await before_request()
+            log.debug("GET %s [sample]", url)
             snippet_info = await _sample_get(client, url, timeout=timeout, max_bytes=max_bytes)
             final_url = snippet_info[0] if snippet_info else str(r.request.url)
             snippet = snippet_info[1] if snippet_info else None
@@ -64,6 +68,7 @@ async def fetch_candidate(
         try:
             if before_request:
                 await before_request()
+            log.debug("GET %s [direct]", url)
             snippet_info = await _sample_get(client, url, timeout=timeout, max_bytes=max_bytes)
             return FetchResult(
                 url=url,

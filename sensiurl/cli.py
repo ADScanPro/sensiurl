@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import logging
 from pathlib import Path
 from typing import Dict, List
 from collections import Counter
@@ -10,6 +11,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from rich.console import Console
 from rich.table import Table
+from rich.logging import RichHandler
 
 from .reporter import print_results
 from .scanner import run_scan
@@ -132,6 +134,16 @@ def _print_precandidates(urls: List[str]) -> None:
     console.print(list_table)
 
 
+def _configure_logging(debug: bool, verbose: bool) -> None:
+    level = logging.DEBUG if debug else (logging.INFO if verbose else logging.WARNING)
+    logging.basicConfig(
+        level=level,
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[RichHandler(rich_tracebacks=debug, markup=True, show_time=False, show_path=False)],
+    )
+
+
 def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="sensiurl",
@@ -147,10 +159,13 @@ def main(argv: List[str] | None = None) -> int:
     parser.add_argument("--user-agent", default="SensiURL/0.1 (+https://github.com/)")
     parser.add_argument("--json-output", help="Write findings as JSON to the given path")
     parser.add_argument("--rate-limit", type=float, default=None, help="Max requests per second (RPS)")
+    parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose logging")
     parser.add_argument("--tui", action="store_true", help="Launch Textual TUI instead of Rich CLI")
 
     args = parser.parse_args(argv)
 
+    _configure_logging(args.debug, args.verbose)
     input_path = Path(args.input)
     if not input_path.exists():
         Console().print(f"[red]Input file not found:[/red] {input_path}")

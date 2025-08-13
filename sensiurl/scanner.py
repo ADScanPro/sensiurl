@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Callable, Iterable, List, Optional
 
 import httpx
@@ -65,6 +66,7 @@ async def scan_async(
     """
     from .fetcher import fetch_candidate
 
+    log = logging.getLogger(__name__)
     candidates: List[Candidate] = []
     for base in base_urls:
         candidates.extend(generate_candidates(base, mode=mode))
@@ -105,6 +107,9 @@ async def scan_async(
                 finding = analyze(cand, res)
                 if finding:
                     findings.append(finding)
+                    log.info("[%s] %s -> %s %s", finding.severity.value, finding.category.value, finding.status_code, finding.url)
+                else:
+                    log.debug("No finding: %s -> %s", cand.path or cand.base_url, res.status_code)
             completed += 1
             if progress_cb:
                 progress_cb(completed, total)

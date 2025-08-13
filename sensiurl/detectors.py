@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+import logging
 from .models import Candidate, Category, Finding, FetchResult, Severity
 
 
@@ -17,6 +18,7 @@ def analyze(candidate: Candidate, res: FetchResult) -> Optional[Finding]:
 
     # 404 or network error: not interesting
     if status == 0 or status == 404:
+        logging.getLogger(__name__).debug("Ignoring %s -> %s", candidate.path or candidate.base_url, status)
         return None
 
     # Directory listing heuristic
