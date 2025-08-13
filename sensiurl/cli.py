@@ -49,9 +49,8 @@ def normalize_url(u: str, *, keep_query: bool = False, keep_fragment: bool = Fal
         return ""
 
 
-def load_targets(path: Path, *, mode: str) -> Tuple[List[str], List[Tuple[int, str]]]:
+def load_targets(path: Path) -> Tuple[List[str], List[Tuple[int, str]]]:
     lines = path.read_text(encoding="utf-8").splitlines()
-    exact = mode == "exact"
     targets: List[str] = []
     invalid: List[Tuple[int, str]] = []
     for idx, raw in enumerate(lines, start=1):
@@ -61,7 +60,7 @@ def load_targets(path: Path, *, mode: str) -> Tuple[List[str], List[Tuple[int, s
             continue
         normalized = normalize_url(
             stripped,
-            keep_query=exact,  # In exact mode we keep query
+            keep_query=True,  # Always keep query in exact-only mode
             keep_fragment=False,  # Fragment is never sent to server; keep for display isn't useful
         )
         if normalized:
@@ -169,10 +168,9 @@ def _configure_logging(debug: bool, verbose: bool) -> None:
 def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="sensiurl",
-        description="Scan URLs for exposed sensitive files and directories. Use --mode exact to scan URLs as-is (default).",
+        description="Scan URLs for exposed sensitive files and directories (exact-only).",
     )
     parser.add_argument("--input", required=True, help="Path to file with base URLs (one per line)")
-    parser.add_argument("--mode", choices=["fast", "standard", "extended", "exact"], default="exact")
     parser.add_argument("--concurrency", type=int, default=50)
     parser.add_argument("--timeout", type=float, default=10.0)
     parser.add_argument("--retries", type=int, default=1)
@@ -193,7 +191,7 @@ def main(argv: List[str] | None = None) -> int:
         Console().print(f"[red]Input file not found:[/red] {input_path}")
         return 1
 
-    targets, invalid_entries = load_targets(input_path, mode=args.mode)
+    targets, invalid_entries = load_targets(input_path)
     if not targets and not invalid_entries:
         Console().print("[yellow]No valid targets found in input file.[/yellow]")
         return 1
@@ -206,21 +204,18 @@ def main(argv: List[str] | None = None) -> int:
             Console().print("[yellow]All input entries were invalid. Nothing to do.[/yellow]")
             return 1
 
-    # Pre-scan: show extensions overview and pre-candidates (exact mode)
-    if args.mode == "exact":
-        # Do not include 'invalid' bucket in summary (already filtered)
-        summary = _summarize_extensions(targets)
-        if "invalid" in summary:
-            summary.pop("invalid", None)
-        _print_extensions_summary(summary)
-        _print_precandidates(targets)
+    # Pre-scan: show extensions overview and pre-candidates (exact-only)
+    summary = _summarize_extensions(targets)
+    if "invalid" in summary:
+        summary.pop("invalid", None)
+    _print_extensions_summary(summary)
+    _print_precandidates(targets)
 
     if args.tui:
         from .tui import SensitiveScannerApp
 
         app = SensitiveScannerApp(
             targets,
-            mode=args.mode,
             concurrency=args.concurrency,
             timeout=args.timeout,
             retries=args.retries,
@@ -235,7 +230,6 @@ def main(argv: List[str] | None = None) -> int:
     # Rich CLI path
     findings = run_scan(
         targets,
-        mode=args.mode,
         concurrency=args.concurrency,
         timeout=args.timeout,
         retries=args.retries,
@@ -246,7 +240,7 @@ def main(argv: List[str] | None = None) -> int:
     )
 
     from .candidates import generate_candidates
-    total_candidates = sum(len(generate_candidates(t, mode=args.mode)) for t in targets)
+    total_candidates = sum(len(generate_candidates(t)) for t in targets)
     print_results(findings, base_count=len(targets), total_candidates=total_candidates)
 
     if args.json_output:

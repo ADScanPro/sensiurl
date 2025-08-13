@@ -23,7 +23,6 @@ class SensitiveScannerApp(App):
     def __init__(
         self,
         base_urls: List[str],
-        mode: str = "standard",
         concurrency: int = 50,
         timeout: float = 10.0,
         retries: int = 1,
@@ -34,7 +33,6 @@ class SensitiveScannerApp(App):
     ) -> None:
         super().__init__()
         self.base_urls = base_urls
-        self.mode = mode
         self.concurrency = concurrency
         self.timeout = timeout
         self.retries = retries
@@ -70,7 +68,6 @@ class SensitiveScannerApp(App):
 
         findings = await scan_async(
             self.base_urls,
-            mode=self.mode,
             concurrency=self.concurrency,
             timeout=self.timeout,
             retries=self.retries,

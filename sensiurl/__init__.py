@@ -7,4 +7,4 @@ Designed to be used as both a script and a library.
 from .scanner import run_scan
 
 __all__ = ["run_scan"]
-__version__ = "0.1.0"
+__version__ = "0.2.2"
